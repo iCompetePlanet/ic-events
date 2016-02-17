@@ -10,11 +10,20 @@
       "type": "string",
       "required": true
     },
-    "address": {
-      "description": "City, State, Zip Code, Country",
-      "type": [
-        "object"
-      ],
+    "city": {
+      "type": "string",
+      "required": true
+    },
+    "state": {
+      "type": "string",
+      "required": true
+    },
+    "zipCode": {
+      "type": "string",
+      "required": true
+    },
+    "Country": {
+      "type": "string",
       "required": true
     },
     "coord": {
