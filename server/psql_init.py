@@ -220,16 +220,18 @@ class PostgresInitialize:
                   'times': ['time_value TIME'],
                   'url': ['url_name TEXT']}
 
-        composite = ['event INTEGER',
-                     'city INTEGER',
-                     'state INTEGER',
-                     'postal_code INTEGER',
-                     'country INTEGER',
-                     'latitude INTEGER',
-                     'longitude INTEGER',
-                     'dates INTEGER',
-                     'times INTEGER',
-                     'url INTEGER']
+        composite = [('event', 'INTEGER'),
+                     ('city', 'INTEGER'),
+                     ('state', 'INTEGER'),
+                     ('postal_code', 'INTEGER'),
+                     ('country', 'INTEGER'),
+                     ('latitude', 'INTEGER'),
+                     ('longitude', 'INTEGER'),
+                     ('dates', 'INTEGER'),
+                     ('times', 'INTEGER'),
+                     ('url', 'INTEGER')]
+        composite_schema = ', '.join([' '.join(x) for x in composite])
+        unique_fields = ', '.join(['event', 'city', 'postal_code', 'dates'])
 
         [self.cur.execute(cmd_drop_table(x)) for x in tables]
         [self.cur.execute(cmd_create_serial_table(x, tables[x]))
@@ -237,8 +239,11 @@ class PostgresInitialize:
 
         self.cur.execute(cmd_drop_table('event'))
         self.cur.execute('''CREATE TABLE {table_name} (
-                            {fields});'''.format(table_name='event',
-                                                 fields=', '.join(composite)))
+                            {schema},
+                            UNIQUE ({fields}));
+                            '''.format(table_name='event',
+                                       schema=composite_schema,
+                                       fields=unique_fields))
 
     @status()
     def psql_city(self):
