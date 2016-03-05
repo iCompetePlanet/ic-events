@@ -16,7 +16,7 @@ import numpy as np
 import psycopg2
 
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
 
 def status():
@@ -79,36 +79,45 @@ class PostgresInitialize:
         self.postal_code = None
         self.time = None
 
-    @staticmethod
-    def cmd_double_field(table, field_1, field_2):
-        """Return command for adding a unique two field row entry to PostgreSQL.
+    def table_find_id(self, table_name, search_field, search_value):
+        """Return the record index from Postgres table with a given search.
 
-        :param table: name of table to append
-        :param field_1: name of first field to define
-        :param field_2: name of second field to define
-        :return: command to append a two field row to a table
+        :param str table_name: name of table to search
+        :param str search_field: field to search for value in table
+        :param str search_value: value to find in table
+        :returns: id of record corresponding to requested fields value
         :rtype: str
         """
-        return '''INSERT INTO {table_name} ({field_1}, {field_2})
-                  SELECT %s, %s WHERE NOT EXISTS (
-                      SELECT {field_1} FROM {table_name} WHERE
-                      {field_1}=%s AND {field_2}=%s)
-                  '''.format(table_name=table, field_1=field_1, field_2=field_2)
+        cmd = '''SELECT id FROM {table}
+                 WHERE {field}=%s'''.format(table=table_name,
+                                            field=search_field)
+        self.cur.execute(cmd, (search_value, ))
+
+        return self.cur.fetchone()[0]
 
     @staticmethod
-    def cmd_single_field(table, field):
-        """Return command for adding a unique entry to a PostgreSQL table.
+    def table_insert(name, field_names):
+        """Return command to add a record into a PostgreSQL database.
 
-        :param str table: name of table to append
-        :param str field: name of table field to define
-        :returns: command to append a single field to a table
+        :param str name: name of table to append
+        :param field_names: names of fields
+        :type: str or list
+        :return: command to append a record to a table
         :rtype: str
         """
-        return '''INSERT INTO {table_name} ({field_name})
-                  SELECT %s WHERE NOT EXISTS (
-                      SELECT {field_name} FROM {table_name} WHERE
-                          {field_name}=%s)'''.format(table_name=table,
-                                                     field_name=field)
+        if isinstance(field_names, str):
+            field_names = [field_names]
+
+        length = len(field_names)
+        if length > 1:
+            values = ','.join(['%s'] * length)
+        else:
+            values = '%s'
+
+        return '''INSERT INTO {table_name} ({fields})
+                  VALUES ({values});'''.format(table_name=name,
+                                               fields=', '.join(field_names),
+                                               values=values)
 
     def get_password(self):
         """Get database user password."""
@@ -138,7 +147,7 @@ class PostgresInitialize:
         self.psql_postal_code()
         self.psql_state()
         self.psql_times()
-
+        self.psql_address()
         self.conn.commit()
 
     @status()
@@ -148,7 +157,8 @@ class PostgresInitialize:
         self.unzip()
         country = np.genfromtxt(self.csv_file, dtype=[('abbr', 'U2'),
                                                       ('name', 'U50')],
-                                delimiter=',', usecols=[0, 1])
+                                delimiter=', ', usecols=[0, 1])
+        self.zip_file()
         self.country = country.view(np.recarray)
 
     @status()
@@ -159,16 +169,18 @@ class PostgresInitialize:
         loc = np.genfromtxt(self.csv_file, dtype=[('postal_code', 'U5'),
                                                   ('city', 'U30'),
                                                   ('state', 'U2'),
-                                                  ('lat', 'f8'), ('lon', 'f8')],
+                                                  ('latitude', 'U9'),
+                                                  ('longitude', 'U9')],
                             delimiter=',', skip_header=1,
                             usecols=[0, 1, 3, 5, 6])
+        self.zip_file()
 
         self.location_data = loc.view(np.recarray)
         self.city = np.unique(self.location_data.city)
         self.state = np.unique(self.location_data.state)
         self.postal_code = np.unique(self.location_data.postal_code)
-        self.latitude = np.unique(self.location_data.lat)
-        self.longitude = np.unique(self.location_data.lon)
+        self.latitude = np.unique(self.location_data.latitude)
+        self.longitude = np.unique(self.location_data.longitude)
 
     @status()
     def load_times(self):
@@ -187,38 +199,57 @@ class PostgresInitialize:
     @status()
     def psql_tables(self):
         """Create PostgreSQL tables."""
-        def cmd_create_serial_table(table_name, fields):
-            """Return command to create a serial table in a PostgreSQL database.
+        def table_create(name, schema, serial=False, unique=None):
+            """Return command to create a table in a PostgreSQL database.
 
-            :param str table_name: name of new table
-            :param list fields: name data type pairs ['n_1 dt_1', 'n_2 dt_2']
-            :returns: command to create a serial table
+            :param str name: name of table
+            :param list schema: schema of table provided in name data type \
+                pairs [(n_1, dt_1), (n_2, dt_2]
+            :param bool serial: a serialized index will be created for the \
+                table and used as the primary key if True
+            :param list unique: field names that define a unique record for \
+                the table
+            :return: command to create a table
             :rtype: str
             """
-            return '''CREATE TABLE {table_name} (
-                      id SERIAL UNIQUE NOT NULL PRIMARY KEY, {fields});
-                      '''.format(table_name=table_name,
-                                 fields=', '.join(fields))
+            base_cmd = 'CREATE TABLE {name} ('.format(name=name)
 
-        def cmd_drop_table(table_name):
-            """Return command for dropping a table from a PostgreSQL database.
+            if serial:
+                serial_cmd = 'id SERIAL UNIQUE NOT NULL PRIMARY KEY,'
+            else:
+                serial_cmd = ''
 
-            :param str table_name: name of table to drop
+            schema_cmd = ', '.join(schema)
+
+            if unique:
+                unique_cmd = ',UNIQUE ({field})'.format(field=', '.join(unique))
+            else:
+                unique_cmd = ''
+
+            return '{base}{serial}{schema}{unique});'.format(base=base_cmd,
+                                                             serial=serial_cmd,
+                                                             schema=schema_cmd,
+                                                             unique=unique_cmd)
+
+        def table_drop(name):
+            """Return command to drop a table from a PostgreSQL database.
+
+            :param str name: name of table to drop
             :returns: command to remove table from database
             :rtype: str
             """
-            return 'DROP TABLE if EXISTS {} CASCADE;'.format(table_name)
+            return 'DROP TABLE if EXISTS {name} CASCADE;'.format(name=name)
 
-        tables = {'city': ['city_name TEXT'],
-                  'country': ['country_abbr CHAR(2)', 'country_name TEXT'],
-                  'dates': ['dates_value DATE'],
-                  'events': ['event_name TEXT'],
-                  'latitude': ['latitude_value REAL'],
-                  'longitude': ['longitude_value REAL'],
-                  'postal_code': ['postal_code_value CHAR(5)'],
-                  'state': ['state_name CHAR(2)'],
-                  'times': ['time_value TIME'],
-                  'url': ['url_name TEXT']}
+        tables = {'city': ['value TEXT'],
+                  'country': ['value CHAR(2)', 'name TEXT'],
+                  'event': ['value TEXT'],
+                  'event_date': ['value DATE'],
+                  'event_time': ['value TIME'],
+                  'latitude': ['value REAL'],
+                  'longitude': ['value REAL'],
+                  'postal_code': ['value CHAR(5)'],
+                  'state': ['value CHAR(2)'],
+                  'url': ['value TEXT']}
 
         composite = [('event', 'INTEGER'),
                      ('city', 'INTEGER'),
@@ -227,66 +258,88 @@ class PostgresInitialize:
                      ('country', 'INTEGER'),
                      ('latitude', 'INTEGER'),
                      ('longitude', 'INTEGER'),
-                     ('dates', 'INTEGER'),
-                     ('times', 'INTEGER'),
+                     ('event_date', 'INTEGER'),
+                     ('event_time', 'INTEGER'),
                      ('url', 'INTEGER')]
-        composite_schema = ', '.join([' '.join(x) for x in composite])
-        unique_fields = ', '.join(['event', 'city', 'postal_code', 'dates'])
 
-        [self.cur.execute(cmd_drop_table(x)) for x in tables]
-        [self.cur.execute(cmd_create_serial_table(x, tables[x]))
+        # Serial Tables
+        [self.cur.execute(table_drop(x)) for x in tables]
+        [self.cur.execute(table_create(x, tables[x], serial=True))
          for x in tables]
 
-        self.cur.execute(cmd_drop_table('event'))
-        self.cur.execute('''CREATE TABLE {table_name} (
-                            {schema},
-                            UNIQUE ({fields}));
-                            '''.format(table_name='event',
-                                       schema=composite_schema,
-                                       fields=unique_fields))
+        # Composite Tables
+        [self.cur.execute(table_drop(x)) for x in ['address', 'event']]
+        self.cur.execute(table_create('address',
+                                      [' '.join(x) for x in composite
+                                       if x[0] in ('city', 'state',
+                                                   'postal_code', 'latitude',
+                                                   'longitude')],
+                                      unique= ['city', 'state', 'postal_code']))
+        self.cur.execute(table_create('event',
+                                      [' '.join(x) for x in composite],
+                                      unique=['event', 'city', 'postal_code',
+                                              'event_date']))
+
+    @status()
+    def psql_address(self):
+        """Populate composite PostreSQL address table."""
+        fields = ['city', 'state', 'postal_code', 'latitude', 'longitude']
+
+        for location in self.location_data:
+            city_id = self.table_find_id('city', 'value', location.city)
+            state_id = self.table_find_id('state', 'value', location.state)
+            postal_code_id = self.table_find_id('postal_code', 'value',
+                                                location.postal_code)
+            latitude_id = self.table_find_id('latitude', 'value',
+                                             location.latitude)
+            longitude_id = self.table_find_id('longitude', 'value',
+                                              location.longitude)
+            field_ids = (city_id, state_id, postal_code_id, latitude_id,
+                         longitude_id)
+
+            self.cur.execute(self.table_insert('address', fields), field_ids)
 
     @status()
     def psql_city(self):
         """Populate PostgreSQL city table."""
-        cmd = self.cmd_single_field('city', 'city_name')
-        [self.cur.execute(cmd, (x, x)) for x in self.city]
+        [self.cur.execute(self.table_insert('city', 'value'), (x, ))
+         for x in self.city]
 
     @status()
     def psql_country(self):
         """Populate PostgreSQL country table."""
-        cmd = self.cmd_double_field('country', 'country_abbr', 'country_name')
-        [self.cur.execute(cmd, (x.abbr, x.name, x.abbr, x.name))
-         for x in self.country]
+        [self.cur.execute(self.table_insert('country', ['value', 'name']),
+                          (x, y)) for (x, y) in self.country]
 
     @status()
     def psql_latitude(self):
         """Populate PostgreSQL latitude table."""
-        cmd = self.cmd_single_field('latitude', 'latitude_value')
-        [self.cur.execute(cmd, (x, x)) for x in self.latitude]
+        [self.cur.execute(self.table_insert('latitude', 'value'), (x, ))
+         for x in self.latitude]
 
     @status()
     def psql_longitude(self):
         """Populate PostgreSQL longitude table."""
-        cmd = self.cmd_single_field('longitude', 'longitude_value')
-        [self.cur.execute(cmd, (x, x)) for x in self.longitude]
+        [self.cur.execute(self.table_insert('longitude', 'value'), (x, ))
+         for x in self.longitude]
 
     @status()
     def psql_postal_code(self):
         """Populate PostgreSQL postal code table."""
-        cmd = self.cmd_single_field('postal_code', 'postal_code_value')
-        [self.cur.execute(cmd, (x, x)) for x in self.postal_code]
+        [self.cur.execute(self.table_insert('postal_code', 'value'), (x, ))
+         for x in self.postal_code]
 
     @status()
     def psql_state(self):
         """Populate PostgreSQL state table."""
-        cmd = self.cmd_single_field('state', 'state_name')
-        [self.cur.execute(cmd, (x, x)) for x in self.state]
+        [self.cur.execute(self.table_insert('state', 'value'), (x, ))
+         for x in self.state]
 
     @status()
     def psql_times(self):
         """Populate PostgreSQL times table."""
-        cmd = self.cmd_single_field('times', 'time_value')
-        [self.cur.execute(cmd, (x, x)) for x in self.time]
+        [self.cur.execute(self.table_insert('event_time', 'value'), (x, ))
+         for x in self.time]
 
     def unzip(self):
         """Unzip csv file if compression attribute csv_zipped is True."""
@@ -297,7 +350,7 @@ class PostgresInitialize:
             with open(self.csv_file, 'w') as f:
                 f.write(csv_data)
 
-    def zip(self):
+    def zip_file(self):
         """Zip csv file after data has been extracted."""
         if not self.csv_zipped:
             with open(self.csv_file, 'rb') as f_in:
@@ -305,3 +358,4 @@ class PostgresInitialize:
                     shutil.copyfileobj(f_in, f_out)
 
         os.remove(self.csv_file)
+
