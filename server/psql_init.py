@@ -79,21 +79,28 @@ class PostgresInitialize:
         self.postal_code = None
         self.time = None
 
-    def table_find_id(self, table_name, search_field, search_value):
-        """Return the record index from Postgres table with a given search.
+    def table_select(self, table_name, return_field='*', search_field=None,
+                     search_value=None):
+        """Return values from a Postgres table with a given search value.
 
         :param str table_name: name of table to search
-        :param str search_field: field to search for value in table
-        :param str search_value: value to find in table
-        :returns: id of record corresponding to requested fields value
+        :param str return_field: field to return from table query (default: * \
+            will return all table fields)
+        :param str search_field: field to search for value in table \
+            (default: None will return all table values)
+        :returns: value corresponding to requested field
         :rtype: str
         """
-        cmd = '''SELECT id FROM {table}
-                 WHERE {field}=%s'''.format(table=table_name,
-                                            field=search_field)
-        self.cur.execute(cmd, (search_value, ))
+        base_cmd = 'SELECT {} FROM {}'.format(return_field, table_name)
 
-        return self.cur.fetchone()[0]
+        if search_field:
+            search_cmd = 'WHERE {}=%s'.format(search_field)
+            cmd = '{} {};'.format(base_cmd, search_cmd)
+            self.cur.execute(cmd, (search_value, ))
+        else:
+            self.cur.execute('{};'.format(base_cmd))
+
+        return self.cur.fetchall()
 
     @staticmethod
     def table_insert(name, field_names):
@@ -191,7 +198,7 @@ class PostgresInitialize:
         self.time = [x.time() for x in day_time]
 
     def psql_connection(self):
-        """Connect to PostgreSQL database and establish a curser."""
+        """Connect to PostgreSQL database and establish a cursor."""
         self.conn = psycopg2.connect(database=self.db_name, user=self.db_user,
                                      password=self.db_pwd)
         self.cur = self.conn.cursor()
@@ -245,8 +252,8 @@ class PostgresInitialize:
                   'event': ['value TEXT'],
                   'event_date': ['value DATE'],
                   'event_time': ['value TIME'],
-                  'latitude': ['value REAL'],
-                  'longitude': ['value REAL'],
+                  'latitude': ['value DOUBLE PRECISION'],
+                  'longitude': ['value DOUBLE PRECISION'],
                   'postal_code': ['value CHAR(5)'],
                   'state': ['value CHAR(2)'],
                   'url': ['value TEXT']}
@@ -268,14 +275,14 @@ class PostgresInitialize:
          for x in tables]
 
         # Composite Tables
-        [self.cur.execute(table_drop(x)) for x in ['address', 'event']]
+        [self.cur.execute(table_drop(x)) for x in ['address', 'events']]
         self.cur.execute(table_create('address',
                                       [' '.join(x) for x in composite
                                        if x[0] in ('city', 'state',
                                                    'postal_code', 'latitude',
                                                    'longitude')],
                                       unique= ['city', 'state', 'postal_code']))
-        self.cur.execute(table_create('event',
+        self.cur.execute(table_create('events',
                                       [' '.join(x) for x in composite],
                                       unique=['event', 'city', 'postal_code',
                                               'event_date']))
@@ -283,21 +290,44 @@ class PostgresInitialize:
     @status()
     def psql_address(self):
         """Populate composite PostreSQL address table."""
-        fields = ['city', 'state', 'postal_code', 'latitude', 'longitude']
+        def idx_sub(name, translate):
+            """Replace record array strings with database index values.
 
-        for location in self.location_data:
-            city_id = self.table_find_id('city', 'value', location.city)
-            state_id = self.table_find_id('state', 'value', location.state)
-            postal_code_id = self.table_find_id('postal_code', 'value',
-                                                location.postal_code)
-            latitude_id = self.table_find_id('latitude', 'value',
-                                             location.latitude)
-            longitude_id = self.table_find_id('longitude', 'value',
-                                              location.longitude)
-            field_ids = (city_id, state_id, postal_code_id, latitude_id,
-                         longitude_id)
+            :param str name: name of field to modify
+            :param list translate: list of tuples to define replace values \
+                with new values (new, replace)
+            """
+            nonlocal addresses
+            field = eval('addresses.{}'.format(name))
+            mask = eval('self.location_data.{}'.format(name))
 
-            self.cur.execute(self.table_insert('address', fields), field_ids)
+            print('   {}'.format(name))
+            for values in self.table_select(name):
+                field[mask == str(values[1])] = values[0]
+
+        fields = ['postal_code', 'city', 'state', 'latitude', 'longitude']
+        addresses = np.recarray(self.location_data.shape,
+                                dtype=list(zip(fields, ['U6'] * len(fields))))
+
+        for field in fields:
+            idx_sub(field, self.table_select(field))
+
+        for a in addresses:
+            self.cur.execute(self.table_insert('address', fields), a)
+
+        # for location in self.location_data:
+            # city_id = self.table_find_id('city', 'value', location.city)
+            # state_id = self.table_find_id('state', 'value', location.state)
+            # postal_code_id = self.table_find_id('postal_code', 'value',
+                                                # location.postal_code)
+            # latitude_id = self.table_find_id('latitude', 'value',
+                                             # location.latitude)
+            # longitude_id = self.table_find_id('longitude', 'value',
+                                              # location.longitude)
+            # field_ids = (city_id, state_id, postal_code_id, latitude_id,
+                         # longitude_id)
+
+            # self.cur.execute(self.table_insert('address', fields), field_ids)
 
     @status()
     def psql_city(self):
