@@ -1,5 +1,5 @@
 {
-  "name": "Event",
+  "name": "PostalCode",
   "base": "PersistedModel",
   "idInjection": false,
   "options": {
@@ -7,7 +7,7 @@
   },
   "postgresql": {
     "schema": "public",
-    "table": "event"
+    "table": "postal_code"
   },
   "properties": {
     "id": {
@@ -30,13 +30,13 @@
     "value": {
       "type": "String",
       "required": false,
-      "length": null,
+      "length": 5,
       "precision": null,
       "scale": null,
       "postgresql": {
         "columnName": "value",
-        "dataType": "text",
-        "dataLength": null,
+        "dataType": "character",
+        "dataLength": 5,
         "dataPrecision": null,
         "dataScale": null,
         "nullable": "YES"

@@ -1,5 +1,5 @@
 {
-  "name": "Event",
+  "name": "EventDate",
   "base": "PersistedModel",
   "idInjection": false,
   "options": {
@@ -7,7 +7,7 @@
   },
   "postgresql": {
     "schema": "public",
-    "table": "event"
+    "table": "event_date"
   },
   "properties": {
     "id": {
@@ -28,14 +28,14 @@
       "_selectable": false
     },
     "value": {
-      "type": "String",
+      "type": "Date",
       "required": false,
       "length": null,
       "precision": null,
       "scale": null,
       "postgresql": {
         "columnName": "value",
-        "dataType": "text",
+        "dataType": "date",
         "dataLength": null,
         "dataPrecision": null,
         "dataScale": null,

@@ -1,0 +1,79 @@
+{
+  "_meta": {
+    "sources": [
+      "loopback/common/models",
+      "loopback/server/models",
+      "../common/models",
+      "./models"
+    ],
+    "mixins": [
+      "loopback/common/mixins",
+      "loopback/server/mixins",
+      "../common/mixins",
+      "./mixins"
+    ]
+  },
+  "User": {
+    "dataSource": "db"
+  },
+  "AccessToken": {
+    "dataSource": "db",
+    "public": false
+  },
+  "ACL": {
+    "dataSource": "db",
+    "public": false
+  },
+  "RoleMapping": {
+    "dataSource": "db",
+    "public": false
+  },
+  "Role": {
+    "dataSource": "db",
+    "public": false
+  },
+  "events": {
+    "dataSource": "mydb",
+    "public": true
+  },
+  "city": {
+    "dataSource": "mydb",
+    "public": true
+  },
+  "country": {
+    "dataSource": "mydb",
+    "public": true
+  },
+  "event": {
+    "dataSource": "mydb",
+    "public": true
+  },
+  "event_date": {
+    "dataSource": "mydb",
+    "public": true
+  },
+  "event_time": {
+    "dataSource": "mydb",
+    "public": true
+  },
+  "latitude": {
+    "dataSource": "mydb",
+    "public": true
+  },
+  "longitude": {
+    "dataSource": "mydb",
+    "public": true
+  },
+  "postal_code": {
+    "dataSource": "mydb",
+    "public": true
+  },
+  "state": {
+    "dataSource": "mydb",
+    "public": true
+  },
+  "url": {
+    "dataSource": "mydb",
+    "public": true
+  }
+}

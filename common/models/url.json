@@ -1,5 +1,5 @@
 {
-  "name": "Event",
+  "name": "Url",
   "base": "PersistedModel",
   "idInjection": false,
   "options": {
@@ -7,7 +7,7 @@
   },
   "postgresql": {
     "schema": "public",
-    "table": "event"
+    "table": "url"
   },
   "properties": {
     "id": {

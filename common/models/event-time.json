@@ -1,5 +1,5 @@
 {
-  "name": "Event",
+  "name": "EventTime",
   "base": "PersistedModel",
   "idInjection": false,
   "options": {
@@ -7,7 +7,7 @@
   },
   "postgresql": {
     "schema": "public",
-    "table": "event"
+    "table": "event_time"
   },
   "properties": {
     "id": {
@@ -35,7 +35,7 @@
       "scale": null,
       "postgresql": {
         "columnName": "value",
-        "dataType": "text",
+        "dataType": "time without time zone",
         "dataLength": null,
         "dataPrecision": null,
         "dataScale": null,

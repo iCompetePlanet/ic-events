@@ -32,8 +32,76 @@
     "dataSource": "db",
     "public": false
   },
+  "Longitude": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
+  "Latitude": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
+  "EventDate": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
+  "Url": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
   "Event": {
-    "dataSource": "db",
-    "public": true
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
+  "PostalCode": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
+  "City": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
+  "Country": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
+  "State": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
+  "EventTime": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
+  "Address": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
+  },
+  "Events": {
+    "dataSource": "iCPdb",
+    "public": true,
+    "$promise": {},
+    "$resolved": true
   }
 }

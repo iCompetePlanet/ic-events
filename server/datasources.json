@@ -2,5 +2,14 @@
   "db": {
     "name": "db",
     "connector": "memory"
+  },
+  "iCPdb": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "iCP_events",
+    "username": "Tim",
+    "password": "",
+    "name": "iCPdb",
+    "connector": "postgresql"
   }
 }

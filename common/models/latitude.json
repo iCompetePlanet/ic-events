@@ -1,5 +1,5 @@
 {
-  "name": "Event",
+  "name": "Latitude",
   "base": "PersistedModel",
   "idInjection": false,
   "options": {
@@ -7,7 +7,7 @@
   },
   "postgresql": {
     "schema": "public",
-    "table": "event"
+    "table": "latitude"
   },
   "properties": {
     "id": {
@@ -28,16 +28,16 @@
       "_selectable": false
     },
     "value": {
-      "type": "String",
+      "type": "Number",
       "required": false,
       "length": null,
-      "precision": null,
+      "precision": 53,
       "scale": null,
       "postgresql": {
         "columnName": "value",
-        "dataType": "text",
+        "dataType": "double precision",
         "dataLength": null,
-        "dataPrecision": null,
+        "dataPrecision": 53,
         "dataScale": null,
         "nullable": "YES"
       },

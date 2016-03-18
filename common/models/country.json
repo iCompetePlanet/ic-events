@@ -1,5 +1,5 @@
 {
-  "name": "Event",
+  "name": "Country",
   "base": "PersistedModel",
   "idInjection": false,
   "options": {
@@ -7,7 +7,7 @@
   },
   "postgresql": {
     "schema": "public",
-    "table": "event"
+    "table": "country"
   },
   "properties": {
     "id": {
@@ -30,11 +30,27 @@
     "value": {
       "type": "String",
       "required": false,
-      "length": null,
+      "length": 2,
       "precision": null,
       "scale": null,
       "postgresql": {
         "columnName": "value",
+        "dataType": "character",
+        "dataLength": 2,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "YES"
+      },
+      "_selectable": true
+    },
+    "name": {
+      "type": "String",
+      "required": false,
+      "length": null,
+      "precision": null,
+      "scale": null,
+      "postgresql": {
+        "columnName": "name",
         "dataType": "text",
         "dataLength": null,
         "dataPrecision": null,
