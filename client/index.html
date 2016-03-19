@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="keywords" content="exercise, race, bike, mountain bike, century, marathon, half marathon, triathlon, duathlon, 10k, 5k, 3k">
+  <meta name="description" content="Engine for assisting users to find and participate in exercise related events.">
+  <meta charset="UTF-8">
+  <meta name="author" content="Timothy Helton">
+
+  <title>iCompetePlanet | Home</title>
+  <link rel="icon" href="images/icon.png">
+
+  <style type="text/css">
+    {color: blue; font-weight: bold; font-size: 20}
+    {color: red; font-weight: bold; font-size: 20}
+    {color: green; font-weight: bold; font-size: 20}
+  </style>
+
+  <script>
+    function initMap(){
+      var mapDiv = document.getElementById('map');
+      var mapOptions = {
+        center: {lat: 38, lng: -95},
+        zoom: 4,
+        mapTypeId: google.maps.MapTypeId.TERRAIN
+      };
+      var map = new google.maps.Map(mapDiv, mapOptions);
+
+      if (navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(function (position){
+          initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+          map.setCenter(initialLocation);
+          map.setZoom(9);
+        });
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <h1 style="color: blue">iCompetePlanet</h1>
+  <hr/>
+  <h2>Let's go COMPETE!</h2>
+
+  <div id="map" style="width: 800px; height: 600px;"></div>
+  <script src="https://maps.googleapis.com/maps/api/js?callback=initMap" async defer></script>
+</body>
+
+</html>
